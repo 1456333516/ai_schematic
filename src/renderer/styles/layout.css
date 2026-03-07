@@ -1,0 +1,52 @@
+.app-layout {
+  display: grid;
+  height: 100vh;
+  grid-template-rows: var(--toolbar-height) 1fr var(--sheet-tabs-height) var(--statusbar-height);
+  grid-template-columns: var(--panel-left-w, var(--panel-left-default)) 1fr var(--panel-right-w, var(--panel-right-default));
+  grid-template-areas:
+    "toolbar   toolbar   toolbar"
+    "left      canvas    right"
+    "left      sheets    right"
+    "status    status    status";
+  transition: grid-template-columns 200ms ease-out;
+}
+
+/* Collapsed states */
+.app-layout--left-collapsed {
+  grid-template-columns: 0px 1fr var(--panel-right-w, var(--panel-right-default));
+}
+
+.app-layout--right-collapsed {
+  grid-template-columns: var(--panel-left-w, var(--panel-left-default)) 1fr 0px;
+}
+
+.app-layout--both-collapsed {
+  grid-template-columns: 0px 1fr 0px;
+}
+
+.layout-toolbar { grid-area: toolbar; }
+.layout-left { grid-area: left; overflow: hidden; }
+.layout-canvas { grid-area: canvas; position: relative; overflow: hidden; }
+.layout-right { grid-area: right; overflow: hidden; }
+.layout-sheets { grid-area: sheets; }
+.layout-status { grid-area: status; }
+
+/* Panel splitter */
+.panel-splitter {
+  position: absolute;
+  top: 0;
+  width: 4px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 10;
+  background: transparent;
+  transition: background 150ms;
+}
+
+.panel-splitter:hover,
+.panel-splitter--active {
+  background: var(--color-primary);
+}
+
+.panel-splitter--left { right: -2px; }
+.panel-splitter--right { left: -2px; }

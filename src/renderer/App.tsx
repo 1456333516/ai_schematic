@@ -1,6 +1,7 @@
 import { ConfigProvider, theme } from 'antd'
 import { AppLayout } from './components/layout/AppLayout'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { DomainProvider } from './contexts/DomainContext'
 
 export default function App() {
   return (
@@ -15,7 +16,9 @@ export default function App() {
           algorithm: theme.defaultAlgorithm
         }}
       >
-        <AppLayout />
+        <DomainProvider>
+          <AppLayout />
+        </DomainProvider>
       </ConfigProvider>
     </ErrorBoundary>
   )

@@ -1,8 +1,10 @@
 import { app, BrowserWindow, Menu, shell, ipcMain, dialog } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
+import { AIService } from './services/AIService'
 
 let mainWindow: BrowserWindow | null = null
+let aiService: AIService | null = null
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -143,6 +145,7 @@ ipcMain.handle('file:getRecentProjects', async () => {
 
 app.whenReady().then(() => {
   Menu.setApplicationMenu(buildMenu())
+  aiService = new AIService()
   createWindow()
 
   app.on('activate', () => {

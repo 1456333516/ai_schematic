@@ -9,6 +9,7 @@ import { useCanvasStore } from '@renderer/stores/useCanvasStore'
 import { useAppStore } from '@renderer/stores/useAppStore'
 import { registerAllShapes } from '../shapes/registerShapes'
 import { logger } from '@shared/utils/logger'
+import { useDomain } from '@renderer/contexts/DomainContext'
 
 let graphInstance: Graph | null = null
 export function getGraph(): Graph | null { return graphInstance }
@@ -20,6 +21,7 @@ export function SchematicCanvas() {
   const [initError, setInitError] = useState<string | null>(null)
 
   const { gridVisible, activeTool } = useCanvasStore()
+  const { initializeGraphSyncer } = useDomain()
 
   logger.debug('Canvas', 'SchematicCanvas render', { gridVisible, activeTool, hasGraph: !!graphRef.current })
 
@@ -223,6 +225,7 @@ export function SchematicCanvas() {
       // Done
       graphRef.current = graph
       graphInstance = graph
+      initializeGraphSyncer(graph)
       logger.info('Canvas', 'Init complete — all steps passed')
 
       return () => {

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useEffect } from 'react'
+import { useCallback, useRef, useEffect, useState } from 'react'
 import { useAppStore } from '@renderer/stores/useAppStore'
 import { useCanvasStore } from '@renderer/stores/useCanvasStore'
 import { Toolbar } from './Toolbar'
@@ -6,6 +6,7 @@ import { StatusBar } from './StatusBar'
 import { SheetTabs } from './SheetTabs'
 import { ComponentLibrary } from '../panels/ComponentLibrary'
 import { AIChatPanel } from '../panels/AIChatPanel'
+import { SettingsDialog } from '../dialogs/SettingsDialog'
 import { ErrorBoundary } from '../ErrorBoundary'
 import { SchematicCanvas } from '../canvas/SchematicCanvas'
 import { WelcomePage } from '../welcome/WelcomePage'
@@ -21,6 +22,8 @@ export function AppLayout() {
     aiChatPanelWidth,
     setPanelWidth
   } = useAppStore()
+
+  const [settingsVisible, setSettingsVisible] = useState(false)
 
   logger.debug('AppLayout', 'Render', {
     currentView,
@@ -66,6 +69,10 @@ export function AppLayout() {
       window.electronAPI.on('menu:new-project', () => {
         logger.debug('AppLayout', 'IPC menu:new-project')
         useAppStore.getState().setCurrentView('welcome')
+      }),
+      window.electronAPI.on('menu:settings', () => {
+        logger.debug('AppLayout', 'IPC menu:settings')
+        setSettingsVisible(true)
       }),
     ]
     return () => {
@@ -134,6 +141,8 @@ export function AppLayout() {
 
       <div className="layout-sheets"><SheetTabs /></div>
       <div className="layout-status"><StatusBar /></div>
+
+      <SettingsDialog visible={settingsVisible} onClose={() => setSettingsVisible(false)} />
     </div>
   )
 }

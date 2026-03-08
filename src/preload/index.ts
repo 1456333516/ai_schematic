@@ -17,6 +17,18 @@ const electronAPI = {
     showOpenDialog: (options: Electron.OpenDialogOptions) =>
       ipcRenderer.invoke('dialog:showOpenDialog', options)
   },
+  ipcRenderer: {
+    invoke: (channel: string, ...args: unknown[]) =>
+      ipcRenderer.invoke(channel, ...args),
+    on: (channel: string, callback: (...args: unknown[]) => void) => {
+      const subscription = (_event: Electron.IpcRendererEvent, ...args: unknown[]) => callback(...args)
+      ipcRenderer.on(channel, subscription)
+      return () => { ipcRenderer.removeListener(channel, subscription) }
+    },
+    removeListener: (channel: string, callback: (...args: unknown[]) => void) => {
+      ipcRenderer.removeListener(channel, callback)
+    }
+  },
   on: (channel: string, callback: (...args: unknown[]) => void) => {
     const subscription = (_event: Electron.IpcRendererEvent, ...args: unknown[]) => callback(...args)
     ipcRenderer.on(channel, subscription)
@@ -25,5 +37,6 @@ const electronAPI = {
 } as const
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI)
+contextBridge.exposeInMainWorld('electron', electronAPI)
 
 export type ElectronAPI = typeof electronAPI

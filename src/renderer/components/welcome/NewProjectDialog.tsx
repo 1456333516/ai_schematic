@@ -37,7 +37,7 @@ export function NewProjectDialog({ open, onClose }: Props) {
       onOk={handleCreate}
       onCancel={() => { form.resetFields(); onClose() }}
       okText="Create"
-      destroyOnClose
+      destroyOnHidden
     >
       <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
         <Form.Item

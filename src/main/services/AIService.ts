@@ -236,6 +236,25 @@ export class AIService {
       return { success: true }
     })
 
+    ipcMain.handle('ai:analyze', async (_event, netlist: NetlistContext) => {
+      if (!this.provider) {
+        throw new Error('API key not configured')
+      }
+      return this.provider.analyzeSchematic(netlist)
+    })
+
+    ipcMain.handle('ai:optimize-layout', async (_event, canvasDescription: string) => {
+      if (!this.provider) {
+        throw new Error('API key not configured')
+      }
+      try {
+        return await this.provider.optimizeLayout(canvasDescription)
+      } catch (error: any) {
+        console.error('[AIService] Layout optimization error:', error)
+        return [] // fail gracefully — keep initial layout
+      }
+    })
+
     ipcMain.handle('settings:test-connection', async (_event, apiKey: string) => {
       if (!apiKey || !this.validateApiKey(apiKey)) {
         throw new Error('Invalid API key format')

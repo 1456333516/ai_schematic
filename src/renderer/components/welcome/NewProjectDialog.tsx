@@ -25,7 +25,10 @@ export function NewProjectDialog({ open, onClose }: Props) {
 
   const handleCreate = async () => {
     const values = await form.validateFields()
-    setProject(values.name, values.path)
+    const filePath = `${values.path}/${values.name}.aischematic`
+    const result = await window.electronAPI.file.createProject(values.name, filePath)
+    if (result?.success === false) return
+    setProject(values.name, filePath)
     form.resetFields()
     onClose()
   }

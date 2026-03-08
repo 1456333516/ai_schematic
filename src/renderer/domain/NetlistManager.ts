@@ -7,6 +7,7 @@ import type {
   Point,
   Wire
 } from './types'
+import type { NetlistDSL } from '../../shared/types/project'
 
 export class NetlistManager {
   private netlist: Netlist
@@ -131,6 +132,32 @@ export class NetlistManager {
 
   getNet(name: string): Net | undefined {
     return this.netlist.nets.get(name)
+  }
+
+  serialize(): NetlistDSL {
+    return {
+      components: Array.from(this.netlist.components.values()).map((c) => ({
+        id: c.id,
+        type: c.type,
+        category: c.category,
+        properties: { ...c.properties }
+      })),
+      connections: Array.from(this.netlist.wires.values()).map((w) => ({
+        from: w.from,
+        to: w.to,
+        net: w.net
+      }))
+    }
+  }
+
+  loadFromDSL(dsl: NetlistDSL): void {
+    this.netlist = { components: new Map(), wires: new Map(), nets: new Map() }
+    for (const comp of dsl.components) {
+      this.addComponent({ id: comp.id, type: comp.type, category: comp.category, properties: comp.properties })
+    }
+    for (const conn of dsl.connections) {
+      try { this.connectPins(conn.from, conn.to) } catch { /* ignore invalid refs */ }
+    }
   }
 
   private generateId<T>(prefix: string, map: Map<string, T>): string {

@@ -1,13 +1,15 @@
 import { Button, Tooltip, Divider } from 'antd'
 import {
   UndoOutlined, RedoOutlined, RotateRightOutlined, SwapOutlined,
-  SelectOutlined, DragOutlined, GatewayOutlined,
+  SelectOutlined, DragOutlined, BorderOutlined,
   ZoomInOutlined, ZoomOutOutlined, CompressOutlined
 } from '@ant-design/icons'
 import { useCanvasStore } from '@renderer/stores/useCanvasStore'
+import { useAppStore } from '@renderer/stores/useAppStore'
 
 export function Toolbar() {
   const { activeTool, setActiveTool } = useCanvasStore()
+  const { projectName, isDirty, currentView } = useAppStore()
 
   return (
     <div style={{
@@ -22,10 +24,10 @@ export function Toolbar() {
     }}>
       {/* History */}
       <Tooltip title="Undo (Ctrl+Z)">
-        <Button type="text" size="small" icon={<UndoOutlined />} disabled />
+        <Button type="text" size="small" icon={<UndoOutlined />} id="btn-undo" />
       </Tooltip>
       <Tooltip title="Redo (Ctrl+Y)">
-        <Button type="text" size="small" icon={<RedoOutlined />} disabled />
+        <Button type="text" size="small" icon={<RedoOutlined />} id="btn-redo" />
       </Tooltip>
 
       <Divider type="vertical" />
@@ -59,14 +61,31 @@ export function Toolbar() {
       </Tooltip>
       <Tooltip title="Box Select (B)">
         <Button
-          type={activeTool === 'boxSelect' ? 'primary' : 'text'}
+          type={activeTool === 'select-box' ? 'primary' : 'text'}
           size="small"
-          icon={<GatewayOutlined />}
-          onClick={() => setActiveTool('boxSelect')}
+          icon={<BorderOutlined />}
+          onClick={() => setActiveTool('select-box')}
         />
       </Tooltip>
 
       <Divider type="vertical" />
+
+      {/* Project title */}
+      {currentView === 'editor' && (
+        <div style={{
+          flex: 1,
+          textAlign: 'center',
+          fontWeight: 500,
+          fontSize: 'var(--font-size-sm)',
+          color: isDirty ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+          userSelect: 'none',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap'
+        }}>
+          {isDirty ? '● ' : ''}{projectName ?? 'Untitled'}
+        </div>
+      )}
 
       {/* Zoom */}
       <Tooltip title="Zoom In (Ctrl+=)">

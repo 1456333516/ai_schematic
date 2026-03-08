@@ -8,10 +8,12 @@ export class CommandBus {
   private redoStack: Command[] = []
   private readonly context: CommandContext
   private readonly eventBus: EventBus
+  private onExecute?: () => void
 
-  constructor(context: CommandContext, eventBus?: EventBus) {
+  constructor(context: CommandContext, eventBus?: EventBus, onExecute?: () => void) {
     this.context = context
     this.eventBus = eventBus ?? new EventBus()
+    this.onExecute = onExecute
   }
 
   execute(cmd: Command): void {
@@ -22,6 +24,7 @@ export class CommandBus {
     }
     this.redoStack = []
     this.emitEvents(events)
+    this.onExecute?.()
   }
 
   undo(): void {
@@ -31,6 +34,7 @@ export class CommandBus {
     const events = cmd.undo(this.context)
     this.redoStack.push(cmd)
     this.emitEvents(events)
+    this.onExecute?.()
   }
 
   redo(): void {
@@ -43,6 +47,7 @@ export class CommandBus {
       this.undoStack.shift()
     }
     this.emitEvents(events)
+    this.onExecute?.()
   }
 
   canUndo(): boolean {

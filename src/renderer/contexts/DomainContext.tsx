@@ -6,6 +6,7 @@ import { EventBus } from '../commands/EventBus'
 import { GraphSyncer } from '../view/GraphSyncer'
 import { GridLayoutEngine } from '../domain/GridLayoutEngine'
 import type { CommandContext } from '../commands/types'
+import { useAppStore } from '../stores/useAppStore'
 
 interface DomainContextValue {
   netlistManager: NetlistManager
@@ -36,7 +37,7 @@ export function DomainProvider({ children }: DomainProviderProps) {
   const [gridLayoutEngine] = useState(() => new GridLayoutEngine())
   const [commandBus] = useState(() => {
     const context: CommandContext = { netlistManager }
-    return new CommandBus(context, eventBus)
+    return new CommandBus(context, eventBus, () => { useAppStore.getState().markDirty() })
   })
   const [graphSyncer, setGraphSyncer] = useState<GraphSyncer | null>(null)
 

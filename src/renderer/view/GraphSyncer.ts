@@ -157,15 +157,18 @@ export class GraphSyncer {
   private handlePropertyUpdated(event: DomainEvent): void {
     this.scheduleUpdate(() => {
       const { id, key, value } = event.data
-      const x6Id = this.domainToX6.get(id)
-      if (!x6Id) return
-
+      const x6Id = this.domainToX6.get(id) ?? id
       const node = this.graph.getCellById(x6Id)
       if (!node) return
 
       const data = node.getData() || {}
-      const properties = { ...(data.properties || {}), [key]: value }
-      node.setData({ ...data, properties }, { silent: true })
+      node.setData({ ...data, [key]: value }, { silent: true })
+
+      if (key === 'refDes') {
+        try { node.attr('refDes/text', value ?? '', { silent: true }) } catch { /* non-fatal */ }
+      } else if (key === 'label') {
+        try { node.attr('valueLabel/text', value ?? '', { silent: true }) } catch { /* non-fatal */ }
+      }
     })
   }
 

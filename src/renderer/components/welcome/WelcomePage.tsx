@@ -4,12 +4,13 @@ import { useState, useEffect } from 'react'
 import { useAppStore } from '@renderer/stores/useAppStore'
 import { NewProjectDialog } from './NewProjectDialog'
 import { logger } from '@shared/utils/logger'
+import type { RecentEntry } from '@shared/types/project'
 
 const { Title, Text } = Typography
 
 export function WelcomePage() {
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [recentProjects, setRecentProjects] = useState<string[]>([])
+  const [recentProjects, setRecentProjects] = useState<RecentEntry[]>([])
   const setProject = useAppStore((s) => s.setProject)
 
   logger.debug('WelcomePage', 'Render')
@@ -25,17 +26,18 @@ export function WelcomePage() {
   }, [])
 
   const handleOpenProject = async () => {
-    logger.debug('WelcomePage', 'Opening project dialog...')
-    const result = await window.electronAPI.system.showOpenDialog({
-      properties: ['openDirectory'],
-      title: 'Open Project'
+    logger.debug('WelcomePage', 'Opening project file dialog...')
+    const dlg = await window.electronAPI.file.openDialog()
+    if (dlg.canceled || !dlg.filePath) return
+    const result = await window.electronAPI.file.openProject(dlg.filePath)
+    if (!result?.success || !result.data) return
+    const data = result.data as any
+    useAppStore.getState().setPendingProjectData({
+      canvas: data.canvas ?? {},
+      schema: data.schema ?? { components: [], connections: [] }
     })
-    if (!result.canceled && result.filePaths[0]) {
-      const path = result.filePaths[0]
-      const name = path.split(/[\\/]/).pop() ?? 'Untitled'
-      logger.info('WelcomePage', 'Opening project', { name, path })
-      setProject(name, path)
-    }
+    logger.info('WelcomePage', 'Opening project', { name: data.meta?.name, path: dlg.filePath })
+    setProject(data.meta?.name ?? 'Untitled', dlg.filePath)
   }
 
   return (
@@ -65,14 +67,26 @@ export function WelcomePage() {
       {recentProjects.length > 0 && (
         <div style={{ width: 360, textAlign: 'left' }}>
           <Text type="secondary" style={{ fontSize: 'var(--font-size-sm)' }}>Recent Projects</Text>
-          {recentProjects.map((p, i) => (
+          {recentProjects.map((entry, i) => (
             <div key={i} style={{
               padding: '8px 0',
               borderBottom: '1px solid var(--color-border)',
               cursor: 'pointer',
               fontSize: 'var(--font-size-sm)'
-            }}>
-              {p}
+            }}
+              onClick={async () => {
+                const result = await window.electronAPI.file.openProject(entry.path)
+                if (!result?.success || !result.data) return
+                const data = result.data as any
+                useAppStore.getState().setPendingProjectData({
+                  canvas: data.canvas ?? {},
+                  schema: data.schema ?? { components: [], connections: [] }
+                })
+                setProject(entry.name, entry.path)
+              }}
+            >
+              <div>{entry.name}</div>
+              <div style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-xs)' }}>{entry.path}</div>
             </div>
           ))}
         </div>

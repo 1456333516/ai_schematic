@@ -4,6 +4,7 @@ import { Selection } from '@antv/x6-plugin-selection'
 import { Snapline } from '@antv/x6-plugin-snapline'
 import { Keyboard } from '@antv/x6-plugin-keyboard'
 import { Clipboard } from '@antv/x6-plugin-clipboard'
+import { History } from '@antv/x6-plugin-history'
 import { MiniMap } from '@antv/x6-plugin-minimap'
 import { useCanvasStore } from '@renderer/stores/useCanvasStore'
 import { useAppStore } from '@renderer/stores/useAppStore'
@@ -21,7 +22,7 @@ export function SchematicCanvas() {
   const [initError, setInitError] = useState<string | null>(null)
 
   const { gridVisible, activeTool } = useCanvasStore()
-  const { initializeGraphSyncer } = useDomain()
+  const { initializeGraphSyncer, netlistManager } = useDomain()
 
   logger.debug('Canvas', 'SchematicCanvas render', { gridVisible, activeTool, hasGraph: !!graphRef.current })
 
@@ -71,8 +72,15 @@ export function SchematicCanvas() {
         },
         panning: { enabled: true },
         connecting: {
-          router: { name: 'manhattan' },
-          connector: { name: 'rounded', args: { radius: 2 } },
+          router: {
+            name: 'manhattan',
+            args: {
+              padding: { left: 30, top: 30, right: 30, bottom: 30 },
+              step: 10,
+              excludeTerminals: ['source', 'target']
+            }
+          },
+          connector: { name: 'rounded', args: { radius: 4 } },
           snap: { radius: 20 },
           allowBlank: false,
           allowLoop: false,
@@ -111,6 +119,7 @@ export function SchematicCanvas() {
       usePlugin('Snapline', () => new Snapline({ enabled: true }))
       usePlugin('Keyboard', () => new Keyboard({ enabled: true, global: false }))
       usePlugin('Clipboard', () => new Clipboard({ enabled: true }))
+      usePlugin('History', () => new History({ enabled: true }))
 
       if (minimapRef.current) {
         usePlugin('MiniMap', () => new MiniMap({
@@ -152,6 +161,7 @@ export function SchematicCanvas() {
 
       graph.on('node:added', ({ node }: { node: { getData: () => Record<string, unknown> | undefined; attr: (path: string, val: unknown) => void; setData: (d: unknown) => void } }) => {
         useCanvasStore.getState().incrementNodeCount()
+        useAppStore.getState().markDirty()
         const data = node.getData()
         if (data?.refDesPrefix && !data.refDes) {
           const refDes = useCanvasStore.getState().getNextRefDes(data.refDesPrefix as string)
@@ -184,7 +194,7 @@ export function SchematicCanvas() {
 
       guardKey('v', () => useCanvasStore.getState().setActiveTool('select'))
       guardKey('h', () => useCanvasStore.getState().setActiveTool('pan'))
-      guardKey('b', () => useCanvasStore.getState().setActiveTool('boxSelect'))
+      guardKey('b', () => useCanvasStore.getState().setActiveTool('select-box'))
       guardKey('r', () => {
         graph.getSelectedCells().filter((c) => c.isNode()).forEach((node) => {
           node.rotate(90, { absolute: false })
@@ -202,6 +212,9 @@ export function SchematicCanvas() {
       graph.bindKey('ctrl+=', () => graph.zoom(0.1))
       graph.bindKey('ctrl+-', () => graph.zoom(-0.1))
       graph.bindKey('ctrl+0', () => graph.zoomToFit({ padding: 40 }))
+
+      graph.bindKey('ctrl+z', () => { if (graph.canUndo()) graph.undo() })
+      graph.bindKey('ctrl+y', () => { if (graph.canRedo()) graph.redo() })
 
       graph.bindKey('ctrl+c', () => {
         const cells = graph.getSelectedCells()
@@ -226,6 +239,21 @@ export function SchematicCanvas() {
       graphRef.current = graph
       graphInstance = graph
       initializeGraphSyncer(graph)
+
+      // Apply pending project data (opened from welcome page)
+      // setTimeout(0) defers clearing so React StrictMode's second effect run
+      // also finds the data (first run clears it synchronously, second run misses it otherwise)
+      const pending = useAppStore.getState().pendingProjectData
+      if (pending) {
+        try { graph.fromJSON(pending.canvas) } catch { /* non-fatal */ }
+        try { netlistManager.loadFromDSL(pending.schema) } catch { /* non-fatal */ }
+        useAppStore.getState().markClean()
+        setTimeout(() => {
+          useAppStore.getState().setPendingProjectData(null)
+          useAppStore.getState().markClean()
+        }, 0)
+      }
+
       logger.info('Canvas', 'Init complete — all steps passed')
 
       return () => {
@@ -265,9 +293,18 @@ export function SchematicCanvas() {
     logger.debug('Canvas', 'Sync tool mode', { from: prev, to: activeTool })
     try {
       if (prev === 'pan') graph.disablePanning()
-      if (prev === 'boxSelect') graph.disableRubberband()
-      if (activeTool === 'pan') graph.enablePanning()
-      else if (activeTool === 'boxSelect') graph.enableRubberband()
+      if (prev === 'select-box') graph.disableRubberband()
+
+      if (activeTool === 'pan') {
+        graph.disableRubberband()
+        graph.enablePanning()
+      } else if (activeTool === 'select-box') {
+        graph.disablePanning()
+        graph.enableRubberband()
+      } else {
+        // select: panning allowed, rubberband disabled
+        graph.disableRubberband()
+      }
     } catch (e) {
       logger.warn('Canvas', 'Tool mode sync error (non-fatal)', e)
     }
@@ -278,6 +315,8 @@ export function SchematicCanvas() {
     const graph = graphRef.current
     if (!graph) return
     const handlers: Record<string, () => void> = {
+      'btn-undo': () => { if (graph.canUndo()) graph.undo() },
+      'btn-redo': () => { if (graph.canRedo()) graph.redo() },
       'btn-zoom-in': () => graph.zoom(0.1),
       'btn-zoom-out': () => graph.zoom(-0.1),
       'btn-zoom-fit': () => graph.zoomToFit({ padding: 40 }),

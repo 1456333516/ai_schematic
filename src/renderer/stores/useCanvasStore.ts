@@ -5,7 +5,7 @@ export interface CanvasState {
   cursorX: number
   cursorY: number
   gridVisible: boolean
-  activeTool: 'select' | 'pan' | 'boxSelect'
+  activeTool: 'select' | 'pan' | 'select-box'
   selectedNodeIds: string[]
   nodeCount: number
   refDesCounters: Record<string, number>

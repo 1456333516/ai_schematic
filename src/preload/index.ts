@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import type { ProjectFileData, BOMRow } from '../shared/types/project'
 
 const electronAPI = {
   file: {
@@ -6,16 +7,45 @@ const electronAPI = {
       ipcRenderer.invoke('file:createProject', name, path),
     openProject: (path: string) =>
       ipcRenderer.invoke('file:openProject', path),
-    saveProject: (data: unknown) =>
-      ipcRenderer.invoke('file:saveProject', data),
+    saveProject: (path: string, data: ProjectFileData) =>
+      ipcRenderer.invoke('file:saveProject', path, data),
     getRecentProjects: () =>
-      ipcRenderer.invoke('file:getRecentProjects')
+      ipcRenderer.invoke('file:getRecentProjects'),
+    openDialog: () =>
+      ipcRenderer.invoke('file:openDialog'),
+    onAutosaveRequest: (callback: () => void) => {
+      const sub = () => callback()
+      ipcRenderer.on('autosave:request', sub)
+      return () => { ipcRenderer.removeListener('autosave:request', sub) }
+    }
+  },
+  ai: {
+    analyze: (netlist: unknown) =>
+      ipcRenderer.invoke('ai:analyze', netlist)
+  },
+  export: {
+    png: (pngDataUrl: string, destPath: string) =>
+      ipcRenderer.invoke('export:png', pngDataUrl, destPath),
+    pdf: (pngDataUrl: string, destPath: string, landscape: boolean) =>
+      ipcRenderer.invoke('export:pdf', pngDataUrl, destPath, landscape),
+    bom: (rows: BOMRow[], destPath: string) =>
+      ipcRenderer.invoke('export:bom', { rows, destPath })
+  },
+  version: {
+    list: (projectPath: string) =>
+      ipcRenderer.invoke('version:list', projectPath),
+    restore: (projectPath: string, versionId: string) =>
+      ipcRenderer.invoke('version:restore', projectPath, versionId)
   },
   system: {
     showSaveDialog: (options: Electron.SaveDialogOptions) =>
       ipcRenderer.invoke('dialog:showSaveDialog', options),
     showOpenDialog: (options: Electron.OpenDialogOptions) =>
-      ipcRenderer.invoke('dialog:showOpenDialog', options)
+      ipcRenderer.invoke('dialog:showOpenDialog', options),
+    showMessageBox: (options: Electron.MessageBoxOptions) =>
+      ipcRenderer.invoke('dialog:showMessageBox', options),
+    setTitle: (title: string) =>
+      ipcRenderer.invoke('system:setTitle', title)
   },
   ipcRenderer: {
     invoke: (channel: string, ...args: unknown[]) =>
